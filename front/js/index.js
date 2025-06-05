@@ -28,10 +28,18 @@ function createArticle(product) {
 // ---------------------------------------------------------------
 async function getProducts() {
   const url = "http://localhost:3000/api/products/";
-  const response = await fetch(url);
-  const json = await response.json();
-  console.log(json);
-  return json;
+  try {
+    const response = await fetch(url);
+    const json = await response.json();
+    console.log(json);
+    return json;
+  } catch (error) {
+    return {
+      error,
+      url,
+      message: "Error fetching products",
+    };
+  }
 }
 
 // ---------------------------------------------------------------
@@ -40,6 +48,8 @@ async function getProducts() {
 
 async function init() {
   const products = await getProducts();
+  // On gere l'erreur potentielle
+  if (products.error) return console.log(products.message);
   products.forEach((product) => {
     productsSection.appendChild(createArticle(product));
   });

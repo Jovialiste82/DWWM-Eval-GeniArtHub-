@@ -40,7 +40,7 @@ function addProductContentToSection(product) {
   return template;
 }
 
-function determinePrice(product) {
+function displayInitialPrice(product) {
   const showprice = document.querySelector(".showprice");
   const quantity = document.querySelector("#quantity");
   const defaultPrice = product.declinaisons[0].prix;
@@ -73,55 +73,69 @@ function updatePrice(product, format, showprice, quantity) {
 }
 
 // ---------------------------------------------------------------
-// -------- Fonctions d'interaction avec Local Storage -----------
+// --------------------- Classes  --------------------------------
 // ---------------------------------------------------------------
-
-function updateCart(product, format, quantityInput) {
-  const cart = JSON.parse(localStorage.getItem("panier")) || [];
-  const productId = product._id;
-  const selectedSize = format.value;
-  const quantityToAdd = parseInt(quantityInput.value, 10);
-  const existingProduct = cart.find((item) => item._id === productId);
-  const updatedCart = cart.filter((item) => item._id !== productId);
-
-  if (!existingProduct) {
-    // Product not in cart yet
-    const newProduct = {
-      _id: productId,
-      declinaisons: [
-        {
-          taille: selectedSize,
-          quantity: quantityToAdd,
-        },
-      ],
-    };
-    updatedCart.push(newProduct);
-    localStorage.setItem("panier", JSON.stringify(updatedCart));
-    return;
+// Creation d'une classe pour gerer le panier et les interactions avec LS
+class Cart {
+  constructor() {
+    this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
   }
 
-  // Check if the size already exists in the declinaisons
-  const existingDeclinaison = existingProduct.declinaisons.find(
-    (d) => d.taille === selectedSize
-  );
-
-  if (!existingDeclinaison) {
-    // Size doesn't exist yet, add it
-    existingProduct.declinaisons.push({
-      taille: selectedSize,
-      quantity: quantityToAdd,
-    });
-  } else {
-    // Size exists, update quantity
-    existingProduct.declinaisons = existingProduct.declinaisons.map((d) =>
-      d.taille === selectedSize
-        ? { ...d, quantity: d.quantity + quantityToAdd }
-        : d
+  updateCart(product, format, quantityInput) {
+    const productId = product._id;
+    const selectedSize = format.value;
+    const quantityToAdd = parseInt(quantityInput.value, 10);
+    const existingProduct = this.currentCart.find(
+      (item) => item._id === productId
     );
-  }
+    const updatedCart = this.currentCart.filter(
+      (item) => item._id !== productId
+    );
 
-  updatedCart.push(existingProduct);
-  localStorage.setItem("panier", JSON.stringify(updatedCart));
+    if (!existingProduct) {
+      // Product not in cart yet
+      const newProduct = {
+        _id: productId,
+        declinaisons: [
+          {
+            taille: selectedSize,
+            quantity: quantityToAdd,
+          },
+        ],
+      };
+      updatedCart.push(newProduct);
+      this.currentCart = updatedCart;
+      localStorage.setItem("panier", JSON.stringify(updatedCart));
+      console.log("Panier mis à jour");
+      return;
+    }
+
+    // Check if the size already exists in the declinaisons
+    const existingDeclinaison = existingProduct.declinaisons.find(
+      (declinaison) => declinaison.taille === selectedSize
+    );
+
+    if (!existingDeclinaison) {
+      // Size doesn't exist yet, add it
+      existingProduct.declinaisons.push({
+        taille: selectedSize,
+        quantity: quantityToAdd,
+      });
+    } else {
+      // Size exists, update quantity
+      existingProduct.declinaisons = existingProduct.declinaisons.map((d) =>
+        d.taille === selectedSize
+          ? { ...d, quantity: d.quantity + quantityToAdd }
+          : d
+      );
+    }
+
+    updatedCart.push(existingProduct);
+    this.currentCart = updatedCart;
+    // console.log("this.currentCart: ", this.currentCart);
+    console.log("Panier mis à jour");
+    localStorage.setItem("panier", JSON.stringify(updatedCart));
+  }
 }
 
 // ---------------------------------------------------------------
@@ -129,10 +143,18 @@ function updateCart(product, format, quantityInput) {
 // ---------------------------------------------------------------
 async function getProduct(productId) {
   const url = `http://localhost:3000/api/products/${productId}`;
-  const response = await fetch(url);
-  const json = await response.json();
-  // console.log(json);
-  return json;
+  try {
+    const response = await fetch(url);
+    const json = await response.json();
+    // console.log(json);
+    return json;
+  } catch (error) {
+    return {
+      error,
+      url,
+      message: "Error fetching product",
+    };
+  }
 }
 
 // ---------------------------------------------------------------
@@ -140,11 +162,15 @@ async function getProduct(productId) {
 // ---------------------------------------------------------------
 
 async function init() {
+  // On cree un panier
+  const cart = new Cart();
   // On recupere l'id du produit dans l'URL
   let params = new URLSearchParams(document.location.search);
   let productId = params.get("id");
   // On fait un appel vers le backend pour recuperer les infos du produit
   const product = await getProduct(productId);
+  // On gere l'erreur potentielle
+  if (product.error) return console.log(product.message);
   // On met a jour l'UI
   const template = addProductContentToSection(product);
   const productsSection = document.querySelector(".detailoeuvre");
@@ -159,7 +185,7 @@ async function init() {
   // On implemente les options de declinaisons
   displayDeclinaisons(product, format);
   // On affiche le prix de base
-  determinePrice(product);
+  displayInitialPrice(product);
   // On affiche la description complete
   const aside = document.querySelector("aside");
   displayDescription(product, aside);
@@ -172,7 +198,7 @@ async function init() {
   // Un clic d'achat met a jour le panier dans Local Storage
   const buyButton = document.querySelector(".button-buy");
   buyButton.addEventListener("click", (e) => {
-    updateCart(product, format, quantity);
+    cart.updateCart(product, format, quantity);
   });
 }
 
