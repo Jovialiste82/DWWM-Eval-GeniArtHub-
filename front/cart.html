@@ -11,14 +11,126 @@
     <link rel="icon" type="image/x-icon" href="img/favicon.ico" />
     <title>GeniArtHub | Panier</title>
   </head>
-  <body>
+  <body class="page">
     <header>
-      <div class="row">
+      <div class="cart-page-header">
         <a href="index.html">
-          <img src="img/logo-white.png" alt="Logo du site GeniArtHub" />
+          <img src="img/logo-black.png" alt="Logo GeniArtHub version sombre" />
         </a>
+        <a href="cart.html"><img src="img/cart.svg" alt="Aller au panier" /></a>
       </div>
     </header>
+    <main id="main-cart">
+      <section id="cart-section">
+        <h1>Votre panier</h1>
+        <p class="empty-cart hidden">
+          Votre panier est vide. Veuillez ajouter au moins un article à votre
+          panier
+        </p>
+        <ul>
+          <!-- <li>
+            <img src="img/01.png" alt="Titre produit" />
+            <span class="item-title">Eclat Ethéré: Bird</span
+            ><span>Format 40 x 30</span><span>35.25€</span
+            ><span
+              >Quantité:
+              <input
+                class="item-quantity-box"
+                type="number"
+                min="1"
+                max="100"
+                value="1" /></span
+            ><a href="#">Supprimer</a>
+          </li>
+          <li>
+            <img src="img/01.png" alt="Titre produit" />
+            <span class="item-title">Eclat Ethéré: Bird</span
+            ><span>Format 40 x 30</span><span>35.25€</span
+            ><span
+              >Quantité:
+              <input
+                class="item-quantity-box"
+                type="number"
+                min="1"
+                max="100"
+                value="1" /></span
+            ><a href="#">Supprimer</a>
+          </li>
+          <li>
+            <img src="img/01.png" alt="Titre produit" />
+            <span class="item-title">Eclat Ethéré: Bird</span
+            ><span>Format 40 x 30</span><span>35.25€</span
+            ><span
+              >Quantité:
+              <input
+                class="item-quantity-box"
+                type="number"
+                min="1"
+                max="100"
+                value="1" /></span
+            ><a href="#">Supprimer</a>
+          </li> -->
+        </ul>
+        <h2>Total de la commande</h2>
+        <p class="summary-cart-display">X articles pour un montant de X €</p>
+      </section>
+      <section id="form-section">
+        <h2>Formulaire de commande</h2>
+        <form action="js/order.js" method="POST">
+          <div class="input-group">
+            <label for="firstname">Prénom:</label>
+            <input
+              type="text"
+              id="firstname"
+              minlength="2"
+              pattern="^[A-Za-z]{2,}$"
+              required
+            />
+          </div>
+          <div class="input-group">
+            <label for="lastname">Nom:</label>
+            <input
+              type="text"
+              id="lastname"
+              minlength="2"
+              pattern="^[A-Za-z]{2,}$"
+              required
+            />
+          </div>
+          <div class="input-group">
+            <label for="address">Adresse:</label>
+            <input
+              type="text"
+              id="address"
+              minlength="10"
+              pattern="^.{10,}$"
+              required
+            />
+          </div>
+          <div class="input-group">
+            <label for="city">Ville:</label>
+            <input
+              type="text"
+              id="city"
+              minlength="3"
+              pattern="^[A-Za-zÀ-ÿ\s]{3,}$"
+              required
+            />
+          </div>
+          <div class="input-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" />
+          </div>
+          <div id="cart-submit-div">
+            <input
+              id="cart-submit-button"
+              type="submit"
+              value="Passer commande"
+            />
+          </div>
+        </form>
+      </section>
+    </main>
 
     <footer>
       <p>
@@ -27,6 +139,6 @@
       </p>
     </footer>
 
-    <script src="js/index.js"></script>
+    <script src="js/order.js"></script>
   </body>
 </html>
