@@ -81,6 +81,14 @@ class Cart {
     this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
   }
 
+  #updateLocalStorage(updatedCart, product) {
+    updatedCart.push(product);
+    this.currentCart = updatedCart;
+    // console.log("this.currentCart: ", this.currentCart);
+    console.log("Panier mis à jour");
+    localStorage.setItem("panier", JSON.stringify(updatedCart));
+  }
+
   updateCart(product, format, quantityInput) {
     const productId = product._id;
     const selectedSize = format.value;
@@ -93,7 +101,7 @@ class Cart {
     );
 
     if (!existingProduct) {
-      // Product not in cart yet
+      // If product not in cart yet
       const newProduct = {
         _id: productId,
         declinaisons: [
@@ -103,10 +111,8 @@ class Cart {
           },
         ],
       };
-      updatedCart.push(newProduct);
-      this.currentCart = updatedCart;
-      localStorage.setItem("panier", JSON.stringify(updatedCart));
-      console.log("Panier mis à jour");
+
+      this.#updateLocalStorage(updatedCart, newProduct);
       return;
     }
 
@@ -116,25 +122,22 @@ class Cart {
     );
 
     if (!existingDeclinaison) {
-      // Size doesn't exist yet, add it
+      // if size doesn't exist yet, add it
       existingProduct.declinaisons.push({
         taille: selectedSize,
         quantity: quantityToAdd,
       });
     } else {
-      // Size exists, update quantity
-      existingProduct.declinaisons = existingProduct.declinaisons.map((d) =>
-        d.taille === selectedSize
-          ? { ...d, quantity: d.quantity + quantityToAdd }
-          : d
+      // if size exists, update quantity
+      existingProduct.declinaisons = existingProduct.declinaisons.map(
+        (declinaison) =>
+          declinaison.taille === selectedSize
+            ? { ...declinaison, quantity: declinaison.quantity + quantityToAdd }
+            : declinaison
       );
     }
 
-    updatedCart.push(existingProduct);
-    this.currentCart = updatedCart;
-    // console.log("this.currentCart: ", this.currentCart);
-    console.log("Panier mis à jour");
-    localStorage.setItem("panier", JSON.stringify(updatedCart));
+    this.#updateLocalStorage(updatedCart, existingProduct);
   }
 }
 
@@ -197,7 +200,7 @@ async function init() {
   });
   // Un clic d'achat met a jour le panier dans Local Storage
   const buyButton = document.querySelector(".button-buy");
-  buyButton.addEventListener("click", (e) => {
+  buyButton.addEventListener("click", () => {
     cart.updateCart(product, format, quantity);
   });
 }
