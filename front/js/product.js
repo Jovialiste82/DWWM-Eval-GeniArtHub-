@@ -81,22 +81,22 @@ class Cart {
     this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
   }
 
-  #updateLocalStorage(updatedCart, product) {
-    updatedCart.push(product);
-    this.currentCart = updatedCart;
-    // console.log("this.currentCart: ", this.currentCart);
+  #updateLocalStorage(updatedCart) {
+    console.log("this.currentCart: ", this.currentCart);
+    console.log("updatedCart: ", updatedCart);
     console.log("Panier mis à jour");
     localStorage.setItem("panier", JSON.stringify(updatedCart));
   }
 
   updateCart(product, format, quantityInput) {
+    // A refaire probablement
     const productId = product._id;
     const selectedSize = format.value;
     const quantityToAdd = parseInt(quantityInput.value, 10);
     const existingProduct = this.currentCart.find(
       (item) => item._id === productId
     );
-    const updatedCart = this.currentCart.filter(
+    this.currentCart = this.currentCart.filter(
       (item) => item._id !== productId
     );
 
@@ -112,7 +112,8 @@ class Cart {
         ],
       };
 
-      this.#updateLocalStorage(updatedCart, newProduct);
+      this.currentCart.push(newProduct);
+      this.#updateLocalStorage(this.currentCart);
       return;
     }
 
@@ -137,7 +138,8 @@ class Cart {
       );
     }
 
-    this.#updateLocalStorage(updatedCart, existingProduct);
+    this.currentCart.push(existingProduct);
+    this.#updateLocalStorage(this.currentCart);
   }
 }
 
