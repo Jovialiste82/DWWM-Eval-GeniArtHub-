@@ -68,6 +68,18 @@ class ProductPage {
     aside.appendChild(p);
   }
 
+  #determineMaxValue(taille) {
+    // On recupere l'id du produit dans l'URL
+    let params = new URLSearchParams(document.location.search);
+    let productId = params.get("id");
+    const maxValue =
+      100 -
+      this.currentCart
+        .find((product) => product._id == productId)
+        .declinaisons.find((product) => product.taille == taille).quantity;
+    return maxValue;
+  }
+
   #updatePrice(format, showprice, quantity) {
     const unitPrice = this.currentProduct.declinaisons.find((object) => {
       return object.taille == format.value;
@@ -84,7 +96,6 @@ class ProductPage {
         const url = `http://localhost:3000/api/products/${productId}`;
         const response = await fetch(url);
         const json = await response.json();
-        // console.log(json);
         return json;
       } catch (error) {
         return {
@@ -95,7 +106,6 @@ class ProductPage {
       }
     }
     this.currentProduct = (await getProduct(productId)) || {};
-    console.log("this.currentProduct: ", this.currentProduct);
   }
 
   updateCart(format, quantityInput) {
@@ -150,13 +160,16 @@ class ProductPage {
 
     this.currentCart.push(existingProduct);
     this.#updateLocalStorage(this.currentCart);
+    const maxValue = this.#determineMaxValue(format.value);
+    console.log(maxValue);
+    quantityInput.setAttribute("max", String(maxValue));
+    quantityInput.value = 1;
   }
 
   updateUI() {
     // Mise a jour du titre de la page
     let newPageTitle = `${this.currentProduct.titre} | GeniArtHub`;
     document.title = newPageTitle;
-    console.log("debug!");
     // Securisation des variables
     const src = this.currentProduct.image ?? "img/01.png";
     const alt = this.currentProduct.titre ?? "Titre de l'oeuvre";
