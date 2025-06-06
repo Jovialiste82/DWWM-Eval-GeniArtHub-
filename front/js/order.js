@@ -20,8 +20,8 @@ class Cart {
 
   #findPrice(productId, taille) {
     return this.priceTable
-      .filter((product) => product.productId == productId)
-      .filter((product) => product.taille == taille)[0].prix;
+      .filter((product) => product.productId == productId) // tableau de tous les objets qui ont le meme _id
+      .filter((product) => product.taille == taille)[0].prix; // tableau des objets avec meme id et meme taille
   }
 
   async getProductsIntoCartInstance() {
@@ -60,11 +60,11 @@ class Cart {
     this.renderItemCards();
   }
 
-  updateCart(product, format, quantityInput) {
+  updateCart(id, taille, quantityInput) {
     // A refaire probablement
-    const productId = product._id;
-    const selectedSize = format.value;
-    const quantityToAdd = parseInt(quantityInput.value, 10);
+    const productId = id;
+    const selectedSize = taille;
+    const quantityToAdd = parseInt(quantityInput, 10);
     const existingProduct = this.currentCart.find(
       (item) => item._id === productId
     );
@@ -167,15 +167,6 @@ class Cart {
               e.target.dataset.id,
               e.target.dataset.taille.split(".").join(" ")
             );
-          });
-        });
-
-      document
-        .querySelectorAll("#cart-section ul li .item-quantity-box")
-        .forEach((quantityInput) => {
-          quantityInput.addEventListener("change", (e) => {
-            console.log(e.target.value);
-            // this.updateCart(productId, taille, newValue)
           });
         });
     }
