@@ -1,7 +1,6 @@
 // ---------------------------------------------------------------
 // --------------------- Classes  --------------------------------
 // ---------------------------------------------------------------
-// Creation d'une classe pour gerer la page produit et les interactions avec LS
 class ProductPage {
   constructor() {
     this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
@@ -68,15 +67,7 @@ class ProductPage {
     aside.appendChild(p);
   }
 
-  #updatePrice(format, quantity) {
-    const showprice = document.querySelector(".showprice");
-    const unitPrice = this.currentProduct.declinaisons.find((object) => {
-      return object.taille == format.value;
-    }).prix;
-    showprice.textContent = `${(quantity.value * unitPrice).toFixed(2)}`;
-  }
-
-  #updatemaxOrderLimits() {
+  #updateMaxOrderLimits() {
     this.maxOrderLimits = []; // reset
     this.maxOrderLimits = this.currentCart
       .find((product) => product._id == this.currentProduct._id)
@@ -87,6 +78,37 @@ class ProductPage {
         };
       });
     console.log("this.maxOrderLimits: ", this.maxOrderLimits);
+  }
+
+  #checkAndDisableInput(format, quantity) {
+    quantity.value = 1;
+    this.#updateMaxOrderLimits();
+    if (this.maxOrderLimits.length == 0) {
+      quantity.disabled = false;
+      return;
+    }
+    const target = this.maxOrderLimits.find(
+      (object) => object.taille == format.value
+    );
+    if (!target) {
+      quantity.disabled = false;
+      quantity.setAttribute("max", "100");
+      return;
+    }
+    if (target.maxOrderLimits < 1) {
+      quantity.disabled = true;
+    } else {
+      quantity.disabled = false;
+      quantity.setAttribute("max", `${target.maxOrderLimits}`);
+    }
+  }
+
+  #updatePrice(format, quantity) {
+    const showprice = document.querySelector(".showprice");
+    const unitPrice = this.currentProduct.declinaisons.find((object) => {
+      return object.taille == format.value;
+    }).prix;
+    showprice.textContent = `${(quantity.value * unitPrice).toFixed(2)}`;
   }
 
   #updateCart() {
@@ -161,7 +183,7 @@ class ProductPage {
 
     // Moving on with the script
     this.#updateLocalStorage(this.currentCart);
-    this.#updatemaxOrderLimits();
+    this.#updateMaxOrderLimits();
     const nextMaxValue = this.maxOrderLimits.find(
       (object) => object.taille == format.value
     ).maxOrderLimits;
@@ -169,7 +191,7 @@ class ProductPage {
     quantity.setAttribute("max", String(nextMaxValue));
     quantity.value = 1;
     if (nextMaxValue < 1) {
-      quantity.setAttribute("disabled", "true");
+      quantity.disabled = true;
     }
     alert("Panier mis à jour..");
   }
@@ -226,10 +248,14 @@ class ProductPage {
     this.#displayInitialPrice(this.currentProduct);
     this.#displayDeclinaisons(this.currentProduct, format);
     this.#displayDescription(this.currentProduct, aside);
-    [format, quantity].forEach((element) => {
-      element.addEventListener("change", () => {
-        this.#updatePrice(format, quantity);
-      });
+    this.#updateMaxOrderLimits();
+    this.#checkAndDisableInput(format, quantity);
+    quantity.addEventListener("change", () => {
+      this.#updatePrice(format, quantity);
+    });
+    format.addEventListener("change", () => {
+      this.#updatePrice(format, quantity);
+      this.#checkAndDisableInput(format, quantity);
     });
     // Un clic d'achat met a jour le panier dans Local Storage
     const buyButton = document.querySelector(".button-buy");
