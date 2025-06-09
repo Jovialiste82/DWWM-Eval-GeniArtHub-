@@ -38,7 +38,7 @@ class ProductPage {
         </article>
 
         <aside>
-            <h2>Description de l’oeuvre :  ${titre}</h2>
+            <h2>Description de l’oeuvre : ${titre}</h2>
         </aside>
 `;
   }
@@ -68,19 +68,8 @@ class ProductPage {
     aside.appendChild(p);
   }
 
-  #determineMaxValue(taille) {
-    // On recupere l'id du produit dans l'URL
-    let params = new URLSearchParams(document.location.search);
-    let productId = params.get("id");
-    const maxValue =
-      100 -
-      this.currentCart
-        .find((product) => product._id == productId)
-        .declinaisons.find((product) => product.taille == taille).quantity;
-    return maxValue;
-  }
-
-  #updatePrice(format, showprice, quantity) {
+  #updatePrice(format, quantity) {
+    const showprice = document.querySelector(".showprice");
     const unitPrice = this.currentProduct.declinaisons.find((object) => {
       return object.taille == format.value;
     }).prix;
@@ -88,8 +77,6 @@ class ProductPage {
   }
 
   #updatemaxOrderLimits() {
-    // console.log(this.currentProduct);
-    // console.log(this.currentCart);
     this.maxOrderLimits = []; // reset
     this.maxOrderLimits = this.currentCart
       .find((product) => product._id == this.currentProduct._id)
@@ -99,7 +86,7 @@ class ProductPage {
           maxOrderLimits: 100 - d.quantity,
         };
       });
-    console.log(this.maxOrderLimits);
+    console.log("this.maxOrderLimits: ", this.maxOrderLimits);
   }
 
   #updateCart() {
@@ -116,7 +103,7 @@ class ProductPage {
           .maxOrderLimits
       : 100;
 
-    // We stop the script if we've reaced the 100 units limit
+    // We stop the script if we've reached the units limit
     if (currentMaxValue < 1) {
       alert("Limite atteinte!");
       return;
@@ -175,7 +162,6 @@ class ProductPage {
     // Moving on with the script
     this.#updateLocalStorage(this.currentCart);
     this.#updatemaxOrderLimits();
-    console.log(this.maxOrderLimits);
     const nextMaxValue = this.maxOrderLimits.find(
       (object) => object.taille == format.value
     ).maxOrderLimits;
@@ -195,11 +181,8 @@ class ProductPage {
       const json = await response.json();
       return json;
     } catch (error) {
-      return {
-        error,
-        url,
-        message: "Error fetching product",
-      };
+      console.log(error);
+      return {};
     }
   }
 
@@ -237,7 +220,6 @@ class ProductPage {
 
     // Capture elements du DOM
     const format = document.querySelector("select");
-    const showprice = document.querySelector(".showprice");
     const quantity = document.querySelector("#quantity");
     const aside = document.querySelector("aside");
     // Injection des infos complementaires et options
@@ -246,7 +228,7 @@ class ProductPage {
     this.#displayDescription(this.currentProduct, aside);
     [format, quantity].forEach((element) => {
       element.addEventListener("change", () => {
-        this.#updatePrice(format, showprice, quantity);
+        this.#updatePrice(format, quantity);
       });
     });
     // Un clic d'achat met a jour le panier dans Local Storage
