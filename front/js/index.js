@@ -1,15 +1,10 @@
 // ---------------------------------------------------------------
-// ---------- Recuperation des elements du DOM -------------------
-// ---------------------------------------------------------------
-const productsSection = document.querySelector(".products");
-
-// ---------------------------------------------------------------
 // ---------- Fonctions d'interaction avec le DOM ----------------
 // ---------------------------------------------------------------
 function createArticle(product) {
   const src = product.image ?? "img/01.png";
   const alt = product.titre ?? "Titre produit";
-  const href = `product.html?id=${product._id}` ?? "product.html";
+  const href = product._id ? `product.html?id=${product._id}` : "product.html";
   const shorttitle = product.shorttitle ?? "Bird";
   const article = document.createElement("article");
   const img = document.createElement("img");
@@ -47,8 +42,8 @@ async function getProducts() {
 // ---------------------------------------------------------------
 
 async function init() {
+  const productsSection = document.querySelector(".products");
   const products = await getProducts();
-  // On gere l'erreur potentielle
   if (products.error) return console.log(products.message);
   products.forEach((product) => {
     productsSection.appendChild(createArticle(product));

@@ -1,43 +1,30 @@
 // ---------------------------------------------------------------
 // --------------------- Classes ---------------------------------
 // ---------------------------------------------------------------
-// Creation d'une classe pour gerer le panier et les interactions avec LS
-class Cart {
+class Panier {
   constructor() {
     this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
-    this.priceTable = [];
-    this.finalPrice = 0;
-    this.itemsCount = 0;
-    this.products = [];
+    this.priceTable = []; // Helper tool to find easily prices based on title and foramt
+    this.finalPrice = 0; // useful for the display
+    this.itemsCount = 0; // useful for the display
+    this.products = []; // will store all products to get prices, images, etc
   }
 
+  // ------------- Private Methods ------------------------
+
   #updateLocalStorage(updatedCart) {
-    // console.log("this.currentCart: ", this.currentCart);
-    // console.log("updatedCart: ", updatedCart);
-    console.log("Panier mis à jour");
+    console.log("Panier mis à jour: ", this.currentCart);
     localStorage.setItem("panier", JSON.stringify(updatedCart));
   }
 
   #findPrice(productId, taille) {
-    return this.priceTable
-      .filter((product) => product.productId == productId) // tableau de tous les objets qui ont le meme _id
-      .filter((product) => product.taille == taille)[0].prix; // tableau des objets avec meme id et meme taille
-  }
-
-  async getProductsIntoCartInstance() {
-    async function getProductsFromBackend() {
-      const url = "http://localhost:3000/api/products/";
-      try {
-        const response = await fetch(url);
-        const json = await response.json();
-        return json;
-      } catch (error) {
-        console.log("Error: ", error);
-      }
-    }
-
-    this.products = (await getProductsFromBackend()) || [];
-    console.log("this.products: ", this.products);
+    return (
+      this.priceTable
+        // tableau de tous les objets qui ont le meme _id
+        .filter((product) => product.productId == productId)
+        // tableau avec un seul object correspondant à une taille specifique pour un _id specifique
+        .filter((product) => product.taille == taille)[0].prix
+    );
   }
 
   #removeItemAndUpdateCart(productId, taille) {
@@ -60,60 +47,152 @@ class Cart {
     this.renderItemCards();
   }
 
-  updateCart(id, taille, quantityInput) {
-    // A refaire probablement
-    const productId = id;
-    const selectedSize = taille;
-    const quantityToAdd = parseInt(quantityInput, 10);
-    const existingProduct = this.currentCart.find(
-      (item) => item._id === productId
-    );
-    this.currentCart = this.currentCart.filter(
-      (item) => item._id !== productId
-    );
-
-    if (!existingProduct) {
-      // If product not in cart yet
-      const newProduct = {
-        _id: productId,
-        declinaisons: [
-          {
-            taille: selectedSize,
-            quantity: quantityToAdd,
-          },
-        ],
-      };
-
-      this.currentCart.push(newProduct);
-      this.updatePriceAndCountSummaryDisplay();
-      this.#updateLocalStorage(this.currentCart);
-      return;
-    }
-
-    // Check if the size already exists in the declinaisons
-    const existingDeclinaison = existingProduct.declinaisons.find(
-      (declinaison) => declinaison.taille === selectedSize
-    );
-
-    if (!existingDeclinaison) {
-      // if size doesn't exist yet, add it
-      existingProduct.declinaisons.push({
-        taille: selectedSize,
-        quantity: quantityToAdd,
+  #updatePriceTable() {
+    // Will help find a price based on id and format
+    this.priceTable = [];
+    this.products.forEach((product) => {
+      product.declinaisons.forEach((d) => {
+        this.priceTable.push({
+          productId: product._id,
+          taille: d.taille,
+          prix: d.prix,
+        });
       });
-    } else {
-      // if size exists, update quantity
-      existingProduct.declinaisons = existingProduct.declinaisons.map(
-        (declinaison) =>
-          declinaison.taille === selectedSize
-            ? { ...declinaison, quantity: declinaison.quantity + quantityToAdd }
-            : declinaison
-      );
+    });
+    console.log("this.priceTable: ", this.priceTable);
+  }
+
+  #validateInputs() {
+    let bool = false;
+    console.log("will validate inputs...");
+    // Implement actual validation logic here
+    bool = true; // For testing purposes
+    return bool;
+  }
+
+  #resetAll() {
+    this.currentCart = [];
+    this.priceTable = [];
+    this.finalPrice = 0;
+    this.itemsCount = 0;
+    this.products = [];
+    this.#updateLocalStorage([]);
+    document.querySelector("#firstname").value = "";
+    document.querySelector("#lastname").value = "";
+    document.querySelector("#address").value = "";
+    document.querySelector("#city").value = "";
+    document.querySelector("#email").value = "";
+    const ul = document.querySelector("#cart-section ul");
+    const p = document.querySelector("#cart-section .empty-cart");
+    ul.textContent = "";
+    p.classList.remove("hidden");
+    this.updatePriceAndCountSummaryDisplay();
+  }
+
+  #buildTemplate(image, titre, prix, product, declinaison) {
+    return `
+        <li>
+          <img src=${image} alt=${titre} />
+          <span class="item-title">${titre}</span>
+          <span>Format ${declinaison.taille}</span>
+          <span>${prix}€</span>
+          <span >Quantité:
+                  <input
+                    class="item-quantity-box"
+                    data-id=${`${product._id}`} 
+                    data-taille=${declinaison.taille.split(" ").join(".")}
+                    type="number"
+                    min="1"
+                    max="100"
+                    value=${`${declinaison.quantity}`} />
+          </span>
+          <a data-id=${`${product._id}`} data-taille=${declinaison.taille
+      .split(" ")
+      .join(".")} href="#">Supprimer</a>
+        </li>
+`;
+  }
+
+  async #submitForm(e) {
+    e.preventDefault();
+
+    // Validate inputs
+    const isInputsValidated = this.#validateInputs();
+
+    if (!isInputsValidated) {
+      return console.log("inputs are not valid");
     }
 
-    this.currentCart.push(existingProduct);
-    this.updatePriceAndCountSummaryDisplay();
-    this.#updateLocalStorage(this.currentCart);
+    // Check if cart is not empty and prepare products list
+    const productIds = this.currentCart.map((item) => item._id);
+    if (productIds.length == 0) {
+      return alert("Votre panier est vide!");
+    }
+
+    const contact = {
+      firstName: document.querySelector("#firstname").value,
+      lastName: document.querySelector("#lastname").value,
+      address: document.querySelector("#address").value,
+      city: document.querySelector("#city").value,
+      email: document.querySelector("#email").value,
+    };
+
+    try {
+      const response = await this.#sendOrder(contact, productIds);
+      if (!response.orderId) {
+        console.log("an issue occurred");
+      }
+
+      return response;
+    } catch (error) {
+      console.error(error);
+      return { error };
+    }
+  }
+
+  async #sendOrder(contact, productIds) {
+    const url = "http://localhost:3000/api/products/order";
+    try {
+      const rawResponse = await fetch(url, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contact,
+          products: productIds,
+        }),
+      });
+      const response = await rawResponse.json();
+      return response;
+    } catch (error) {
+      const response = {
+        error,
+        url,
+        message: "Error sending order",
+      };
+      console.log(error.message);
+      return response;
+    }
+  }
+
+  // ------------- Public Methods ------------------------
+
+  async getProductsInfoAndUpdatePriceTable() {
+    async function getProductsFromBackend() {
+      const url = "http://localhost:3000/api/products/";
+      try {
+        const response = await fetch(url);
+        const json = await response.json();
+        return json;
+      } catch (error) {
+        console.log("Error: ", error);
+      }
+    }
+
+    this.products = (await getProductsFromBackend()) || [];
+    this.#updatePriceTable();
   }
 
   renderItemCards() {
@@ -130,30 +209,10 @@ class Cart {
           const prix = this.products
             .find((p) => p._id == product._id)
             .declinaisons.find((d) => d.taille == declinaison.taille).prix;
-          const taille = declinaison.taille;
-          const quantity = declinaison.quantity;
-          const template = `
-        <li>
-          <img src=${image} alt=${titre} />
-          <span class="item-title">${titre}</span>
-          <span>Format ${taille}</span>
-          <span>${prix}€</span>
-          <span >Quantité:
-                  <input
-                    class="item-quantity-box"
-                    data-id=${`${product._id}`} 
-                    data-taille=${declinaison.taille.split(" ").join(".")}
-                    type="number"
-                    min="1"
-                    max="100"
-                    value=${`${quantity}`} />
-          </span>
-          <a data-id=${`${product._id}`} data-taille=${declinaison.taille
-            .split(" ")
-            .join(".")} href="#">Supprimer</a>
-        </li>
-        `;
-          ul.insertAdjacentHTML("beforeend", template);
+          ul.insertAdjacentHTML(
+            "beforeend",
+            this.#buildTemplate(image, titre, prix, product, declinaison)
+          );
         });
       });
       p.classList.add("hidden");
@@ -170,19 +229,6 @@ class Cart {
           });
         });
     }
-  }
-
-  updatePriceTable() {
-    this.products.forEach((product) => {
-      product.declinaisons.forEach((d) => {
-        this.priceTable.push({
-          productId: product._id,
-          taille: d.taille,
-          prix: d.prix,
-        });
-      });
-    });
-    console.log(this.priceTable);
   }
 
   updatePriceAndCountSummaryDisplay() {
@@ -212,78 +258,34 @@ class Cart {
       });
     });
     // update UI
-
     display.textContent = `${this.itemsCount} article${
       this.itemsCount > 1 ? "s" : ""
     } pour un montant de ${this.finalPrice.toFixed(2)} €`;
   }
-}
 
-// ---------------------------------------------------------------
-// ---------- Interactions avec le DOM ---------------------------
-// ---------------------------------------------------------------
-const form = document.querySelector("form");
-
-function submitForm(e) {
-  e.preventDefault();
-
-  // should double check here if input from user match constraints
-  isInputsValidated = validateInputs();
-
-  if (!isInputsValidated) {
-    return console.log("inputs are not valid");
-  }
-
-  const contact = {
-    firstName: document.querySelector("#firstname").value,
-    lastName: document.querySelector("#lastname").value,
-    address: document.querySelector("#address").value,
-    city: document.querySelector("#city").value,
-    email: document.querySelector("#email").value,
-  };
-
-  console.log("Form is valid. Proceeding...");
-  sendOrder(contact);
-  console.log(contact);
-}
-
-// ---------------------------------------------------------------
-// ---------- Fonctions utilitaires ------------------------------
-// ---------------------------------------------------------------
-function validateInputs() {
-  let bool = false;
-  console.log("will validate inputs...");
-  bool = true; // enable testing rest of form submission
-  return bool;
-}
-
-// ---------------------------------------------------------------
-// ---------- Fonctions d'interaction avec le backend ------------
-// ---------------------------------------------------------------
-async function sendOrder(contact) {
-  const url = "http://localhost:3000/api/products/order";
-  try {
-    const rawResponse = await fetch(url, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contact,
-        products: ["def67890", "ghi54321", "jkl98765"],
-      }),
+  addEventListeners() {
+    const form = document.querySelector("form");
+    const closeModalButton = document.querySelector(".modal-card span");
+    form.addEventListener("submit", async (e) => {
+      try {
+        const response = await this.#submitForm(e);
+        console.log("response: ", response);
+        if (response && response.orderId) {
+          const modal = document.querySelector(".modal-filter");
+          const modalCard = document.querySelector(".modal-card");
+          const p = document.createElement("p");
+          p.textContent = `Voici votre numéro de commande: ${response.orderId}`;
+          modalCard.appendChild(p);
+          modal.classList.remove("hidden");
+          this.#resetAll();
+        }
+      } catch (error) {
+        console.log(error);
+      }
     });
-    const content = await rawResponse.json();
-    console.log(content);
-  } catch (error) {
-    const response = {
-      error,
-      url,
-      message: "Error sending order",
-    };
-    console.log(error.message);
-    return response;
+    closeModalButton.addEventListener("click", (e) => {
+      e.target.parentElement.parentElement.classList.add("hidden");
+    });
   }
 }
 
@@ -292,15 +294,12 @@ async function sendOrder(contact) {
 // ---------------------------------------------------------------
 
 async function init() {
-  const cart = new Cart();
-  console.log("cart.currentCart: ", cart.currentCart);
-  await cart.getProductsIntoCartInstance();
-  cart.updatePriceTable();
-  cart.renderItemCards();
-  cart.updatePriceAndCountSummaryDisplay();
-  form.addEventListener("submit", (e) => {
-    submitForm(e);
-  });
+  const panier = new Panier();
+  console.log("panier.currentCart: ", panier.currentCart);
+  await panier.getProductsInfoAndUpdatePriceTable();
+  panier.renderItemCards();
+  panier.updatePriceAndCountSummaryDisplay();
+  panier.addEventListeners();
 }
 
 init();

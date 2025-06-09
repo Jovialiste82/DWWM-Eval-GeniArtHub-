@@ -6,12 +6,12 @@ class ProductPage {
   constructor() {
     this.currentCart = JSON.parse(localStorage.getItem("panier")) || [];
     this.currentProduct = {};
+    this.maxOrderLimits = [];
   }
 
+  // ----------------- Private Methods ---------------------
   #updateLocalStorage(updatedCart) {
-    console.log("this.currentCart: ", this.currentCart);
-    console.log("updatedCart: ", updatedCart);
-    console.log("Panier mis à jour");
+    console.log("Panier mis à jour: ", updatedCart);
     localStorage.setItem("panier", JSON.stringify(updatedCart));
   }
 
@@ -26,7 +26,7 @@ class ProductPage {
                 <p>${paragraphe}</p>
                 <div class="price">
                     <p>Acheter pour</p>
-                    <span class="showprice">40€</span>
+                    <span class="showprice"></span>
                 </div>
                 <div class="declinaison">
                     <input type="number" name="quantity" id="quantity" placeholder="1" value="1" min="1" max="100" minlength="1">
@@ -87,32 +87,42 @@ class ProductPage {
     showprice.textContent = `${(quantity.value * unitPrice).toFixed(2)}`;
   }
 
-  async getProductInfo() {
-    // On recupere l'id du produit dans l'URL
-    let params = new URLSearchParams(document.location.search);
-    let productId = params.get("id");
-    async function getProduct(productId) {
-      try {
-        const url = `http://localhost:3000/api/products/${productId}`;
-        const response = await fetch(url);
-        const json = await response.json();
-        return json;
-      } catch (error) {
+  #updatemaxOrderLimits() {
+    // console.log(this.currentProduct);
+    // console.log(this.currentCart);
+    this.maxOrderLimits = []; // reset
+    this.maxOrderLimits = this.currentCart
+      .find((product) => product._id == this.currentProduct._id)
+      .declinaisons.map((d) => {
         return {
-          error,
-          url,
-          message: "Error fetching product",
+          taille: d.taille,
+          maxOrderLimits: 100 - d.quantity,
         };
-      }
-    }
-    this.currentProduct = (await getProduct(productId)) || {};
+      });
+    console.log(this.maxOrderLimits);
   }
 
-  updateCart(format, quantityInput) {
-    // A refaire probablement
+  #updateCart() {
+    const format = document.querySelector("select");
+    const quantity = document.querySelector("#quantity");
     const productId = this.currentProduct._id;
     const selectedSize = format.value;
-    const quantityToAdd = parseInt(quantityInput.value, 10);
+    const quantityToAdd = parseInt(quantity.value, 10);
+    console.log("this.maxOrderLimits: ", this.maxOrderLimits);
+    const currentMaxValue = this.maxOrderLimits.find(
+      (object) => object.taille == format.value
+    )
+      ? this.maxOrderLimits.find((object) => object.taille == format.value)
+          .maxOrderLimits
+      : 100;
+
+    // We stop the script if we've reaced the 100 units limit
+    if (currentMaxValue < 1) {
+      alert("Limite atteinte!");
+      return;
+    }
+
+    // Otherwise we move on and update the cart
     const existingProduct = this.currentCart.find(
       (item) => item._id === productId
     );
@@ -120,8 +130,8 @@ class ProductPage {
       (item) => item._id !== productId
     );
 
+    // Case 1 : product is not in cart yet
     if (!existingProduct) {
-      // If product not in cart yet
       const newProduct = {
         _id: productId,
         declinaisons: [
@@ -133,40 +143,75 @@ class ProductPage {
       };
 
       this.currentCart.push(newProduct);
-      this.#updateLocalStorage(this.currentCart);
-      return;
     }
 
-    // Check if the size already exists in the declinaisons
-    const existingDeclinaison = existingProduct.declinaisons.find(
-      (declinaison) => declinaison.taille === selectedSize
-    );
-
-    if (!existingDeclinaison) {
-      // if size doesn't exist yet, add it
-      existingProduct.declinaisons.push({
-        taille: selectedSize,
-        quantity: quantityToAdd,
-      });
-    } else {
-      // if size exists, update quantity
-      existingProduct.declinaisons = existingProduct.declinaisons.map(
-        (declinaison) =>
-          declinaison.taille === selectedSize
-            ? { ...declinaison, quantity: declinaison.quantity + quantityToAdd }
-            : declinaison
+    // Case 2 : product already in cart, so we check if declinaison already exists
+    if (existingProduct) {
+      const existingDeclinaison = existingProduct.declinaisons.find(
+        (declinaison) => declinaison.taille === selectedSize
       );
+
+      if (!existingDeclinaison) {
+        // if size doesn't exist yet, add it
+        existingProduct.declinaisons.push({
+          taille: selectedSize,
+          quantity: quantityToAdd,
+        });
+      } else {
+        // if size exists, update quantity
+        existingProduct.declinaisons = existingProduct.declinaisons.map(
+          (declinaison) =>
+            declinaison.taille === selectedSize
+              ? {
+                  ...declinaison,
+                  quantity: declinaison.quantity + quantityToAdd,
+                }
+              : declinaison
+        );
+      }
+      this.currentCart.push(existingProduct);
     }
 
-    this.currentCart.push(existingProduct);
+    // Moving on with the script
     this.#updateLocalStorage(this.currentCart);
-    const maxValue = this.#determineMaxValue(format.value);
-    console.log(maxValue);
-    quantityInput.setAttribute("max", String(maxValue));
-    quantityInput.value = 1;
+    this.#updatemaxOrderLimits();
+    console.log(this.maxOrderLimits);
+    const nextMaxValue = this.maxOrderLimits.find(
+      (object) => object.taille == format.value
+    ).maxOrderLimits;
+    console.log("maxValue: ", nextMaxValue);
+    quantity.setAttribute("max", String(nextMaxValue));
+    quantity.value = 1;
+    if (nextMaxValue < 1) {
+      quantity.setAttribute("disabled", "true");
+    }
+    alert("Panier mis à jour..");
   }
 
-  updateUI() {
+  async #getProduct(productId) {
+    try {
+      const url = `http://localhost:3000/api/products/${productId}`;
+      const response = await fetch(url);
+      const json = await response.json();
+      return json;
+    } catch (error) {
+      return {
+        error,
+        url,
+        message: "Error fetching product",
+      };
+    }
+  }
+
+  // ------------- Public Methods ------------------------
+  async getProductInfo() {
+    // On recupere l'id du produit dans l'URL
+    let params = new URLSearchParams(document.location.search);
+    let productId = params.get("id");
+    this.currentProduct = (await this.#getProduct(productId)) || {};
+  }
+
+  paintInitialUI() {
     // Mise a jour du titre de la page
     let newPageTitle = `${this.currentProduct.titre} | GeniArtHub`;
     document.title = newPageTitle;
@@ -174,7 +219,9 @@ class ProductPage {
     const src = this.currentProduct.image ?? "img/01.png";
     const alt = this.currentProduct.titre ?? "Titre de l'oeuvre";
     const titre = this.currentProduct.titre ?? "Titre manquant";
-    const shorttitle = `Buy ${this.currentProduct.shorttitle}` ?? "Erreur";
+    const shorttitle = this.currentProduct.shorttitle
+      ? `Buy ${this.currentProduct.shorttitle}`
+      : "Nothing to buy I am afraid";
     // on cree un mini paragraphe de deux phrases
     const paragraphe =
       `${this.currentProduct.description.split(".").slice(0, 2).join(".")}.` ??
@@ -185,7 +232,7 @@ class ProductPage {
       .querySelector(".detailoeuvre")
       .insertAdjacentHTML(
         "beforeend",
-        this.#buildTemplate(src, alt, titre, paragraphe, shorttitle, titre)
+        this.#buildTemplate(src, alt, titre, paragraphe, shorttitle)
       );
 
     // Capture elements du DOM
@@ -205,7 +252,7 @@ class ProductPage {
     // Un clic d'achat met a jour le panier dans Local Storage
     const buyButton = document.querySelector(".button-buy");
     buyButton.addEventListener("click", () => {
-      this.updateCart(format, quantity);
+      this.#updateCart(format, quantity);
     });
   }
 }
@@ -215,12 +262,9 @@ class ProductPage {
 // ---------------------------------------------------------------
 
 async function init() {
-  // On cree un panier
   const productPage = new ProductPage();
-  // On recupere les infos du produit
   await productPage.getProductInfo();
-  // On met a jour l'UI
-  productPage.updateUI();
+  productPage.paintInitialUI();
 }
 
 init();
