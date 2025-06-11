@@ -69,15 +69,20 @@ class ProductPage {
 
   #updateMaxOrderLimits() {
     this.maxOrderLimits = []; // reset
-    this.maxOrderLimits = this.currentCart
-      .find((product) => product._id == this.currentProduct._id)
-      .declinaisons.map((d) => {
-        return {
-          taille: d.taille,
-          maxOrderLimits: 100 - d.quantity,
-        };
-      });
-    console.log("this.maxOrderLimits: ", this.maxOrderLimits);
+
+    // verifie qu'il y a au moins un produit correspondant
+    const cartItem = Array.isArray(this.currentCart)
+      ? this.currentCart.find((p) => p._id == this.currentProduct._id)
+      : null;
+
+    if (cartItem && Array.isArray(cartItem.declinaisons)) {
+      this.maxOrderLimits = cartItem.declinaisons.map((d) => ({
+        taille: d.taille,
+        maxOrderLimits: 100 - d.quantity,
+      }));
+    }
+
+    console.log("this.maxOrderLimits:", this.maxOrderLimits);
   }
 
   #checkAndDisableInput(format, quantity) {

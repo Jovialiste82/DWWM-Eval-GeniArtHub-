@@ -265,7 +265,6 @@ class Panier {
 
   addEventListeners() {
     const form = document.querySelector("form");
-    const closeModalButton = document.querySelector(".modal-card span");
     form.addEventListener("submit", async (e) => {
       try {
         const response = await this.#submitForm(e);
@@ -283,9 +282,11 @@ class Panier {
         console.log(error);
       }
     });
+    const closeModalButton = document.querySelector(".modal-card span");
     closeModalButton.addEventListener("click", (e) => {
       e.target.parentElement.parentElement.classList.add("hidden");
     });
+    // const summaryCartDipsplay = document.querySelector(".summary-cart-display");
   }
 }
 
